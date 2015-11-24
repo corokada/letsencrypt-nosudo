@@ -2,10 +2,11 @@
 import argparse, subprocess, json, os, urllib2, sys, base64, binascii, time, \
     hashlib, tempfile, re, copy, textwrap
 
-def sign_csr(pubkey, csr, email=None):
+def sign_csr(docroot, pubkey, csr, email=None):
     """Use the ACME protocol to get an ssl certificate signed by a
     certificate authority.
 
+    :param string docroot: Path to the response signatures save.
     :param string pubkey: Path to the user account public key.
     :param string csr: Path to the certificate signing request.
     :param string email: An optional user account contact email
@@ -73,13 +74,7 @@ def sign_csr(pubkey, csr, email=None):
     sys.stderr.write("Found domains {}\n".format(", ".join(domains)))
 
     # Step 3: Ask user for contact email
-    if not email:
-        default_email = "webmaster@{}".format(min(domains, key=len))
-        stdout = sys.stdout
-        sys.stdout = sys.stderr
-        input_email = raw_input("STEP 1: What is your contact email? ({}) ".format(default_email))
-        email = input_email if input_email else default_email
-        sys.stdout = stdout
+    email = "webmaster@{}".format(min(domains, key=len))
 
     # Step 4: Generate the payloads that need to be signed
     # registration
@@ -156,22 +151,17 @@ def sign_csr(pubkey, csr, email=None):
     csr_file_sig_name = os.path.basename(csr_file_sig.name)
 
     # Step 5: Ask the user to sign the registration and requests
-    sys.stderr.write("""\
-STEP 2: You need to sign some files (replace 'user.key' with your user private key).
+    cmd = "openssl dgst -sha256 -sign user.key -out %s %s" % (reg_file_sig_name, reg_file_name)
+    subprocess.call(cmd.strip().split(" "))
 
-openssl dgst -sha256 -sign user.key -out {} {}
-{}
-openssl dgst -sha256 -sign user.key -out {} {}
+    for i in ids:
+        id_file_sig_name = i['sig_name']
+        id_file_name = i['file_name']
+        cmd = "openssl dgst -sha256 -sign user.key -out %s %s" % (id_file_sig_name, id_file_name)
+        subprocess.call(cmd.strip().split(" "))
 
-""".format(
-    reg_file_sig_name, reg_file_name,
-    "\n".join("openssl dgst -sha256 -sign user.key -out {} {}".format(i['sig_name'], i['file_name']) for i in ids),
-    csr_file_sig_name, csr_file_name))
-
-    stdout = sys.stdout
-    sys.stdout = sys.stderr
-    raw_input("Press Enter when you've run the above commands in a new terminal window...")
-    sys.stdout = stdout
+    cmd = "openssl dgst -sha256 -sign user.key -out %s %s" % (csr_file_sig_name, csr_file_name)
+    subprocess.call(cmd.strip().split(" "))
 
     # Step 6: Load the signatures
     reg_file_sig.seek(0)
@@ -266,19 +256,11 @@ openssl dgst -sha256 -sign user.key -out {} {}
         })
 
     # Step 9: Ask the user to sign the challenge responses
-    sys.stderr.write("""\
-STEP 3: You need to sign some more files (replace 'user.key' with your user private key).
-
-{}
-
-""".format(
-    "\n".join("openssl dgst -sha256 -sign user.key -out {} {}".format(
-        i['sig_name'], i['file_name']) for i in tests)))
-
-    stdout = sys.stdout
-    sys.stdout = sys.stderr
-    raw_input("Press Enter when you've run the above commands in a new terminal window...")
-    sys.stdout = stdout
+    for i in tests:
+        test_file_sig_name = i['sig_name']
+        test_file_name = i['file_name']
+        cmd = "openssl dgst -sha256 -sign user.key -out %s %s" % (test_file_sig_name, test_file_name)
+        subprocess.call(cmd.strip().split(" "))
 
     # Step 10: Load the response signatures
     for n, i in enumerate(ids):
@@ -287,21 +269,12 @@ STEP 3: You need to sign some more files (replace 'user.key' with your user priv
 
     # Step 11: Ask the user to host the token on their server
     for n, i in enumerate(ids):
-        sys.stderr.write("""\
-STEP {}: You need to run this command on {} (don't stop the python command until the next step).
+        if not os.path.isdir("{}/.well-known/acme-challenge/".format(docroot)):
+            os.makedirs("{}/.well-known/acme-challenge/".format(docroot))
 
-sudo python -c "import BaseHTTPServer; \\
-    h = BaseHTTPServer.BaseHTTPRequestHandler; \\
-    h.do_GET = lambda r: r.send_response(200) or r.end_headers() or r.wfile.write('{}'); \\
-    s = BaseHTTPServer.HTTPServer(('0.0.0.0', 80), h); \\
-    s.serve_forever()"
-
-""".format(n+4, i['domain'], responses[n]['data']))
-
-        stdout = sys.stdout
-        sys.stdout = sys.stderr
-        raw_input("Press Enter when you've got the python command running on your server...")
-        sys.stdout = stdout
+        http_response_file = open("{}/{}".format(docroot, responses[n]['uri']), "w")
+        http_response_file.write(responses[n]['data'])
+        http_response_file.close()
 
         # Step 12: Let the CA know you're ready for the challenge
         sys.stderr.write("Requesting verification for {}...\n".format(i['domain']))
@@ -346,6 +319,8 @@ sudo python -c "import BaseHTTPServer; \\
             else:
                 raise KeyError("'{}' challenge did not pass: {}".format(i['domain'], challenge_status))
 
+        os.remove("{}/{}".format(docroot, responses[n]['uri']))
+
     # Step 14: Get the certificate signed
     sys.stderr.write("Requesting signature...\n")
     csr_file_sig.seek(0)
@@ -370,8 +345,6 @@ sudo python -c "import BaseHTTPServer; \\
         raise
 
     # Step 15: Convert the signed cert from DER to PEM
-    sys.stderr.write("Certificate signed!\n")
-    sys.stderr.write("You can stop running the python command on your server (Ctrl+C works).\n")
     signed_der64 = base64.b64encode(signed_der)
     signed_pem = """\
 -----BEGIN CERTIFICATE-----
@@ -402,16 +375,27 @@ Example: Generate an account keypair, a domain key and csr, and have the domain 
 $ openssl genrsa 4096 > user.key
 $ openssl rsa -in user.key -pubout > user.pub
 $ openssl genrsa 4096 > domain.key
+--------------single access
 $ openssl req -new -sha256 -key domain.key -subj "/CN=example.com" > domain.csr
-$ python sign_csr.py --public-key user.pub domain.csr > signed.crt
+--------------dual access
+$ openssl req -new -sha256 -key domain.key -subj "/" -reqexts SAN -config \
+  <(cat /etc/pki/tls/openssl.cnf <(printf "[SAN]\nsubjectAltName=DNS:example.com,DNS:www.example.com")) \
+  > domain.csr
+$ python sign_csr.py -d /path/to/document_root -p user.pub -in domain.csr -out signed.crt
 --------------
 
 """)
+    parser.add_argument("-d", "--document_root", required=True, help="path to response signatures save")
     parser.add_argument("-p", "--public-key", required=True, help="path to your account public key")
     parser.add_argument("-e", "--email", default=None, help="contact email, default is webmaster@<shortest_domain>")
-    parser.add_argument("csr_path", help="path to your certificate signing request")
+    parser.add_argument("-in", "--csr_path", required=True, help="path to your certificate signing request file name")
+    parser.add_argument("-out", "--crt_path", required=True, help="path to your certificate file name")
 
     args = parser.parse_args()
-    signed_crt = sign_csr(args.public_key, args.csr_path, email=args.email)
-    sys.stdout.write(signed_crt)
+    signed_crt = sign_csr(args.document_root, args.public_key, args.csr_path, email=args.email)
+    cert_file = open(args.crt_path, "w")
+    cert_file.write(signed_crt)
+    cert_file.flush()
+    cert_file.close()
+    sys.stdout.write("Create certificate file.\n")
 
