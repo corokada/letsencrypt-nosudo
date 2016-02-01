@@ -55,7 +55,7 @@ fi
 cp ${CERTDIR}${DOMAIN}.{key,csr,crt,ca-bundle} ${CONFDIR}
 
 ## ダミー証明書を使っているかチェック
-if grep -v "#" $CONFFILE | grep "pki" | grep SSLCertificateFile; then
+if grep -v "#" $CONFFILE | grep "pki" | grep -sq "SSLCertificateFile"; then
     ## CONFFILEの修正
     sed -i -e "/SSLCertificateFile/c\    SSLCertificateFile ${CERT}" $CONFFILE
     sed -i -e "/SSLCertificateKeyFile/c\    SSLCertificateKeyFile ${KEY}" $CONFFILE
