@@ -2,7 +2,7 @@
 
 #
 # ssl certificate create 
-#     (hogehoge.com)
+#     (hogehoge.com/www.hogehoge.com/mail.hogehoge.com)
 #
 # Author: corokada
 #
@@ -14,13 +14,13 @@ fi
 
 DOMAIN=$1
 
-## ãã‚Œãã‚Œç’°å¢ƒã«åˆã‚ã›ã¦ä¿®æ­£ã‚’ã—ã¦ãã ã•ã„ã€‚
+## ‚»‚ê‚¼‚êŠÂ‹«‚É‡‚í‚¹‚ÄC³‚ğ‚µ‚Ä‚­‚¾‚³‚¢B
 CERTDIR="`dirname $0`/"
 
-# httpdã®ãƒ‘ã‚¹
+# httpd‚ÌƒpƒX
 HTTPD="/usr/sbin/httpd"
 
-# ç™ºè¡Œãƒ—ãƒ­ã‚°ãƒ©ãƒ ã®ãƒ‘ã‚¹
+# ”­sƒvƒƒOƒ‰ƒ€‚ÌƒpƒX
 SIGNPG="${CERTDIR}sign_csr.py"
 
 #CONF
@@ -30,7 +30,7 @@ if [ "$CONF" == "" ]; then
     exit 0
 fi
 
-# ãƒ¦ãƒ¼ã‚¶ãƒ¼èªè¨¼æƒ…å ±
+# ƒ†[ƒU[”FØî•ñ
 USERKEY="${CERTDIR}user.key"
 USERPUB="${CERTDIR}user.pub"
 if [ ! -f ${USERPUB} ]; then
@@ -38,20 +38,24 @@ if [ ! -f ${USERPUB} ]; then
     openssl rsa -in ${USERKEY} -pubout > ${USERPUB}
 fi
 
-# ç§˜å¯†éµä½œæˆ
+# ”é–§Œ®ì¬
 KEY="${CERTDIR}${DOMAIN}.key"
 if [ ! -f ${KEY} ]; then
     openssl genrsa 4096 > ${KEY}
 fi
 
-# CSRä½œæˆ
+# CSRì¬
 CSR="${CERTDIR}${DOMAIN}.csr"
 if [ -f ${CSR} ]; then
     mv ${CSR} ${CSR}.`date +%Y%m%d-%H%M%S`
 fi
-openssl req -new -sha256 -key ${KEY} -subj "/CN=${DOMAIN}" > ${CSR}
+tmp=`mktemp -p /tmp -t opensslconf.XXXXXXXXXXXXXXX`
+cat /etc/pki/tls/openssl.cnf > $tmp
+printf "[SAN]\nsubjectAltName=DNS:${DOMAIN},DNS:www.${DOMAIN},DNS:mail.${DOMAIN}" >> $tmp
+openssl req -new -sha256 -key ${KEY} -subj "/" -reqexts SAN -config $tmp > ${CSR}
+rm -rf $tmp
 
-# ç™ºè¡Œæ¸ˆã¿è¨¼æ˜æ›¸ãƒãƒƒã‚¯ã‚¢ãƒƒãƒ—
+# ”­sÏ‚İØ–¾‘ƒoƒbƒNƒAƒbƒv
 CERT="${CERTDIR}${DOMAIN}.crt"
 if [ -f ${CERT} ]; then
     AFTER=`openssl x509 -noout -text -dates -in $CERT | grep notAfter | cut -d'=' -f2`
@@ -59,25 +63,25 @@ if [ -f ${CERT} ]; then
     cp -pr $CERT $CERT.limit$AFTER
 fi
 
-# ãƒ‰ã‚­ãƒ¥ãƒ¡ãƒ³ãƒˆãƒ«ãƒ¼ãƒˆ
+# ƒhƒLƒ…ƒƒ“ƒgƒ‹[ƒg
 DOCROOT=`cat $CONF | grep DocumentRoot | awk '{print $2}' | uniq`
 
-## BASICèªè¨¼å›é¿
+## BASIC”FØ‰ñ”ğ
 mkdir -p ${DOCROOT}/.well-known/acme-challenge
 echo "Satisfy any" > ${DOCROOT}/.well-known/.htaccess
 echo "order allow,deny" >> ${DOCROOT}/.well-known/.htaccess
 echo "allow from all" >> ${DOCROOT}/.well-known/.htaccess
 
-# è¨¼æ˜æ›¸ç™ºè¡Œå‡¦ç†
+# Ø–¾‘”­sˆ—
 cd $CERTDIR
 python ${SIGNPG} -d ${DOCROOT} -p ${USERPUB} -in ${CSR} -out ${CERT}
 
-# CAè¨¼æ˜æ›¸
+# CAØ–¾‘
 CA="${CERTDIR}${DOMAIN}.ca-bundle"
 if [ -f ${CA} ]; then
     mv ${CA} ${CA}.`date +%Y%m%d-%H%M%S`
 fi
 wget -q -O ${CA} https://letsencrypt.org/certs/lets-encrypt-x1-cross-signed.pem
 
-# ä¸è¦ãƒ•ã‚¡ã‚¤ãƒ«å‰Šé™¤
+# •s—vƒtƒ@ƒCƒ‹íœ
 rm -rf ${DOCROOT}/.well-known
