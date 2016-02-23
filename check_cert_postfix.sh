@@ -13,8 +13,8 @@ CERTDIR="`dirname $0`/"
 DOMAIN=$1
 
 # postfix用証明書フルパス
-PCERT=`cat /etc/postfix/main.cf | grep smtpd_tls_cert_file | grep -v localhost | sed -e "s/ //g" | cut -d'=' -f2`
-if [ ! -f $PCERT ]; then
+PCERT=`cat /etc/postfix/main.cf | grep smtpd_tls_cert_file | sed -e "s/ //g" | cut -d'=' -f2`
+if echo $PCERT | grep -sq "localhost"; then
     exit 0
 fi
 
