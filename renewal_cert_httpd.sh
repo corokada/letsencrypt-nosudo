@@ -6,10 +6,10 @@
 # Author: corokada
 #
 
-## ‚»‚ê‚¼‚êŠÂ‹«‚É‡‚í‚¹‚ÄC³‚ð‚µ‚Ä‚­‚¾‚³‚¢B
+## ãã‚Œãžã‚Œç’°å¢ƒã«åˆã‚ã›ã¦ä¿®æ­£ã‚’ã—ã¦ãã ã•ã„ã€‚
 CERTDIR="`dirname $0`/"
 
-# ƒ†[ƒU[”FØî•ñ
+# ãƒ¦ãƒ¼ã‚¶ãƒ¼èªè¨¼æƒ…å ±
 USERKEY="${CERTDIR}user.key"
 USERPUB="${CERTDIR}user.pub"
 if [ ! -f ${USERPUB} ]; then
@@ -17,32 +17,32 @@ if [ ! -f ${USERPUB} ]; then
     openssl rsa -in ${USERKEY} -pubout > ${USERPUB}
 fi
 
-# httpd‚ÌƒpƒX
+# httpdã®ãƒ‘ã‚¹
 HTTPD="/usr/sbin/httpd"
 
-# ”­sƒvƒƒOƒ‰ƒ€‚ÌƒpƒX
+# ç™ºè¡Œãƒ—ãƒ­ã‚°ãƒ©ãƒ ã®ãƒ‘ã‚¹
 SIGNPG="${CERTDIR}sign_csr.py"
 
-# confˆê——Žæ‚èo‚µ
+# confä¸€è¦§å–ã‚Šå‡ºã—
 for CONFFILE in `$HTTPD -S | grep virtualhost | grep "port 443" | tr -d ' ' | cut -d'(' -f2 | cut -d':' -f1 | sort | uniq`
 do
-    #ƒ_ƒ~[Ø–¾‘ƒ`ƒFƒbƒN
+    #ãƒ€ãƒŸãƒ¼è¨¼æ˜Žæ›¸ãƒã‚§ãƒƒã‚¯
     if grep -v "#" $CONFFILE | grep -v "pki" | grep -sq "SSLCertificateFile"; then
         CERT=`grep -v "#" $CONFFILE | grep -v "pki" | grep SSLCertificateFile | awk '{print $2}' | uniq`
-        # —LŒøŠúŒÀ‚ðŽæ‚èo‚·
+        # æœ‰åŠ¹æœŸé™ã‚’å–ã‚Šå‡ºã™
         AFTER=`openssl x509 -noout -text -dates -in $CERT | grep notAfter | cut -d'=' -f2`
         AFTER=`env TZ=JST-9 date --date "$AFTER" +%s`
-        # ŽÀsƒ^ƒCƒ~ƒ“ƒO‚Æ‚ÌŽc“ú”‚ðŒvŽZ‚·‚é
+        # å®Ÿè¡Œã‚¿ã‚¤ãƒŸãƒ³ã‚°ã¨ã®æ®‹æ—¥æ•°ã‚’è¨ˆç®—ã™ã‚‹
         NOW=`env TZ=JST-9 date +%s`
         CNT=`echo "$AFTER $NOW" | awk '{printf("%d",(($1-$2)/86400)+0.5)}'`
         echo "$CERT:$CNT"
-        # —LŒøŠúŒÀ20“úˆÈ“à
+        # æœ‰åŠ¹æœŸé™20æ—¥ä»¥å†…
         if [ "$CNT" -le 20 ]; then
             DOMAIN=`cat $CONFFILE | grep -v "#" | grep ServerName | awk '{print $2}' | grep -v ":"`
             DOCROOT=`cat $CONFFILE | grep DocumentRoot | awk '{print $2}' | uniq`
             KEY=`cat $CONFFILE | grep -v "#" | grep SSLCertificateKeyFile | awk '{print $2}' | uniq`
             CSR=${CERT/.crt/.csr}
-            # CSR‚ª–³‚¢ê‡‚ÍAì¬‚·‚é
+            # CSRãŒç„¡ã„å ´åˆã¯ã€ä½œæˆã™ã‚‹
             if [ ! -f "$CSR" ]; then
                 FLG=`openssl x509 -noout -text -in $CERT | grep DNS | grep ","`
                 if [ "$FLG" == "" ]; then
@@ -55,21 +55,21 @@ do
                     rm -rf $tmp
                 fi
             fi
-            # ƒoƒbƒNƒAƒbƒv
+            # ãƒãƒƒã‚¯ã‚¢ãƒƒãƒ—
             AFTER=`openssl x509 -noout -text -dates -in $CERT | grep notAfter | cut -d'=' -f2`
             AFTER=`env TZ=JST-9 date --date "$AFTER" +%Y%m%d-%H%M`
             cp -pr $CERT $CERT.limit$AFTER
-            # BASIC”FØ‰ñ”ð
+            # BASICèªè¨¼å›žé¿
             mkdir -p ${DOCROOT}/.well-known/acme-challenge
             echo "Satisfy any" > ${DOCROOT}/.well-known/.htaccess
             echo "order allow,deny" >> ${DOCROOT}/.well-known/.htaccess
             echo "allow from all" >> ${DOCROOT}/.well-known/.htaccess
-            # Ø–¾‘”­sˆ—
+            # è¨¼æ˜Žæ›¸ç™ºè¡Œå‡¦ç†
             cd ${CERTDIR}
             python ${SIGNPG} -d ${DOCROOT} -p ${USERPUB} -in ${CSR} -out ${CERT}
-            # ”FØ—pƒfƒBƒŒƒNƒgƒŠíœ
+            # èªè¨¼ç”¨ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªå‰Šé™¤
             rm -rf ${DOCROOT}/.well-known
-            # apacheÄ‹N“®
+            # apacheå†èµ·å‹•
             apachectl graceful
         fi
     fi

@@ -14,13 +14,13 @@ fi
 
 DOMAIN=$1
 
-## ‚»‚ê‚¼‚êŠÂ‹«‚É‡‚í‚¹‚ÄC³‚ğ‚µ‚Ä‚­‚¾‚³‚¢B
+## ãã‚Œãã‚Œç’°å¢ƒã«åˆã‚ã›ã¦ä¿®æ­£ã‚’ã—ã¦ãã ã•ã„ã€‚
 CERTDIR="`dirname $0`/"
 
-# httpd‚ÌƒpƒX
+# httpdã®ãƒ‘ã‚¹
 HTTPD="/usr/sbin/httpd"
 
-# ”­sƒvƒƒOƒ‰ƒ€‚ÌƒpƒX
+# ç™ºè¡Œãƒ—ãƒ­ã‚°ãƒ©ãƒ ã®ãƒ‘ã‚¹
 SIGNPG="${CERTDIR}sign_csr.py"
 
 #CONF
@@ -30,7 +30,7 @@ if [ "$CONF" == "" ]; then
     exit 0
 fi
 
-# ƒ†[ƒU[”FØî•ñ
+# ãƒ¦ãƒ¼ã‚¶ãƒ¼èªè¨¼æƒ…å ±
 USERKEY="${CERTDIR}user.key"
 USERPUB="${CERTDIR}user.pub"
 if [ ! -f ${USERPUB} ]; then
@@ -38,13 +38,13 @@ if [ ! -f ${USERPUB} ]; then
     openssl rsa -in ${USERKEY} -pubout > ${USERPUB}
 fi
 
-# ”é–§Œ®ì¬
+# ç§˜å¯†éµä½œæˆ
 KEY="${CERTDIR}${DOMAIN}.key"
 if [ ! -f ${KEY} ]; then
     openssl genrsa 4096 > ${KEY}
 fi
 
-# CSRì¬
+# CSRä½œæˆ
 CSR="${CERTDIR}${DOMAIN}.csr"
 if [ -f ${CSR} ]; then
     mv ${CSR} ${CSR}.`date +%Y%m%d-%H%M%S`
@@ -55,7 +55,7 @@ printf "[SAN]\nsubjectAltName=DNS:${DOMAIN},DNS:www.${DOMAIN},DNS:mail.${DOMAIN}
 openssl req -new -sha256 -key ${KEY} -subj "/" -reqexts SAN -config $tmp > ${CSR}
 rm -rf $tmp
 
-# ”­sÏ‚İØ–¾‘ƒoƒbƒNƒAƒbƒv
+# ç™ºè¡Œæ¸ˆã¿è¨¼æ˜æ›¸ãƒãƒƒã‚¯ã‚¢ãƒƒãƒ—
 CERT="${CERTDIR}${DOMAIN}.crt"
 if [ -f ${CERT} ]; then
     AFTER=`openssl x509 -noout -text -dates -in $CERT | grep notAfter | cut -d'=' -f2`
@@ -63,25 +63,25 @@ if [ -f ${CERT} ]; then
     cp -pr $CERT $CERT.limit$AFTER
 fi
 
-# ƒhƒLƒ…ƒƒ“ƒgƒ‹[ƒg
+# ãƒ‰ã‚­ãƒ¥ãƒ¡ãƒ³ãƒˆãƒ«ãƒ¼ãƒˆ
 DOCROOT=`cat $CONF | grep DocumentRoot | awk '{print $2}' | uniq`
 
-## BASIC”FØ‰ñ”ğ
+## BASICèªè¨¼å›é¿
 mkdir -p ${DOCROOT}/.well-known/acme-challenge
 echo "Satisfy any" > ${DOCROOT}/.well-known/.htaccess
 echo "order allow,deny" >> ${DOCROOT}/.well-known/.htaccess
 echo "allow from all" >> ${DOCROOT}/.well-known/.htaccess
 
-# Ø–¾‘”­sˆ—
+# è¨¼æ˜æ›¸ç™ºè¡Œå‡¦ç†
 cd $CERTDIR
 python ${SIGNPG} -d ${DOCROOT} -p ${USERPUB} -in ${CSR} -out ${CERT}
 
-# CAØ–¾‘
+# CAè¨¼æ˜æ›¸
 CA="${CERTDIR}${DOMAIN}.ca-bundle"
 if [ -f ${CA} ]; then
     mv ${CA} ${CA}.`date +%Y%m%d-%H%M%S`
 fi
 wget -q -O ${CA} https://letsencrypt.org/certs/lets-encrypt-x1-cross-signed.pem
 
-# •s—vƒtƒ@ƒCƒ‹íœ
+# ä¸è¦ãƒ•ã‚¡ã‚¤ãƒ«å‰Šé™¤
 rm -rf ${DOCROOT}/.well-known

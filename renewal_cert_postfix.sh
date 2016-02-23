@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #
-# ssl certificate renewal for qmail
+# ssl certificate renewal for postfix/dovecot
 #
 # Author: corokada
 #
@@ -23,23 +23,23 @@ HTTPD="/usr/sbin/httpd"
 # 発行プログラムのパス
 SIGNPG="${CERTDIR}sign_csr.py"
 
-#qmail用の証明書
-QMAILCERT="/var/qmail/control/servercert.pem"
-if [ ! -f $QMAILCERT ]; then
+# postfix用証明書フルパス
+PCERT=`cat /etc/postfix/main.cf | grep smtpd_tls_cert_file | grep -v localhost | sed -e "s/ //g" | cut -d'=' -f2`
+if [ ! -f $PCERT ]; then
     exit 0
 fi
 
 # 有効期限を取り出す
-AFTER=`openssl x509 -noout -text -dates -in $QMAILCERT | grep notAfter | cut -d'=' -f2`
+AFTER=`openssl x509 -noout -text -dates -in $PCERT | grep notAfter | cut -d'=' -f2`
 AFTER=`env TZ=JST-9 date --date "$AFTER" +%s`
 # 実行タイミングとの残日数を計算する
 NOW=`env TZ=JST-9 date +%s`
 CNT=`echo "$AFTER $NOW" | awk '{printf("%d",(($1-$2)/86400)+0.5)}'`
-echo "$QMAILCERT:$CNT"
+echo "$PCERT:$CNT"
 # 有効期限20日以内
 if [ "$CNT" -le 20 ]; then
     # 設定を取り出す
-    DOMAIN=`openssl x509 -noout -text -in $QMAILCERT | grep "Subject: CN" | cut -d'=' -f2`
+    DOMAIN=`openssl x509 -noout -text -in $PCERT | grep "Subject: CN" | cut -d'=' -f2`
     CONFFILE=`$HTTPD -S | grep "port 80" | grep $DOMAIN | tr -d ' ' | cut -d'(' -f2 | cut -d':' -f1`
     if [ "$CONFFILE" == "" ]; then
         echo "'$CONFFILE' is not exist. Create a '${DOMAIN}' Virtual Host."
@@ -74,6 +74,7 @@ if [ "$CNT" -le 20 ]; then
     cp -pr $CERT $CERT.limit$AFTER
     # BASIC認証回避
     mkdir -p ${DOCROOT}/.well-known/acme-challenge
+    rm -rf ${DOCROOT}/.well-known/.htaccess
     echo "Satisfy any" > ${DOCROOT}/.well-known/.htaccess
     echo "order allow,deny" >> ${DOCROOT}/.well-known/.htaccess
     echo "allow from all" >> ${DOCROOT}/.well-known/.htaccess
@@ -83,12 +84,13 @@ if [ "$CNT" -le 20 ]; then
     # 認証用ディレクトリ削除
     rm -rf ${DOCROOT}/.well-known
     # 現在時刻を付けてリネーム。
-    AFTER=`openssl x509 -noout -text -dates -in $QMAILCERT | grep notAfter | cut -d'=' -f2`
+    AFTER=`openssl x509 -noout -text -dates -in $PCERT | grep notAfter | cut -d'=' -f2`
     AFTER=`env TZ=JST-9 date --date "$AFTER" +%Y%m%d-%H%M`
-    cp -pr $QMAILCERT $QMAILCERT.limit$AFTER
+echo "$AFTER"
+    cp -pr $PCERT $PCERT.limit$AFTER
     # コピー
-    cat ${CERTDIR}${DOMAIN}.{key,crt,ca-bundle} > $QMAILCERT
-    chown qmaild.qmail $QMAILCERT
+    cat ${CERTDIR}${DOMAIN}.{crt,ca-bundle} > ${PCERT}
     # サービス再起動
-    /etc/init.d/qmail restart
+    /etc/init.d/postfix reload
+    /etc/init.d/dovecot reload
 fi

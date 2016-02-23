@@ -11,17 +11,17 @@ if [ -z "$1" ]; then
         exit 0
 fi
 
-## ÇªÇÍÇºÇÍä¬ã´Ç…çáÇÌÇπÇƒèCê≥ÇÇµÇƒÇ≠ÇæÇ≥Ç¢ÅB
+## „Åù„Çå„Åû„ÇåÁí∞Â¢É„Å´Âêà„Çè„Åõ„Å¶‰øÆÊ≠£„Çí„Åó„Å¶„Åè„Å†„Åï„ÅÑ„ÄÇ
 CERTDIR="`dirname $0`/"
 
-# ÉhÉÅÉCÉìê›íË
+# „Éâ„É°„Ç§„É≥Ë®≠ÂÆö
 DOMAIN=$1
 
-# postfixópèÿñæèëÉtÉãÉpÉX
+# postfixÁî®Ë®ºÊòéÊõ∏„Éï„É´„Éë„Çπ
 PCERT=`cat /etc/postfix/main.cf | grep smtpd_tls_cert_file | sed -e "s/ //g" | cut -d'=' -f2`
 PKEY=`cat /etc/postfix/main.cf | grep smtpd_tls_key_file | sed -e "s/ //g" | cut -d'=' -f2`
 
-## èÿñæèëÉ`ÉFÉbÉN
+## Ë®ºÊòéÊõ∏„ÉÅ„Çß„ÉÉ„ÇØ
 CERT="${CERTDIR}${DOMAIN}.crt"
 if [ ! -f $CERT ]; then
     echo "'$CERT' is not exist. Create a '${DOMAIN}' Certificate."
@@ -38,7 +38,7 @@ if [ ! -f $CA ]; then
     exit 0
 fi
 
-## ä˘Ç…Ç†ÇÈèÍçáÇÕåªç›éûçèÇïtÇØÇƒÉäÉlÅ[ÉÄÅB
+## Êó¢„Å´„ÅÇ„ÇãÂ†¥Âêà„ÅØÁèæÂú®ÊôÇÂàª„Çí‰ªò„Åë„Å¶„É™„Éç„Éº„É†„ÄÇ
 CERTTMP=`dirname $PCERT`
 if [ -f ${CERTTMP}/${DOMAIN}.crt ]; then
     cp -pr ${CERTTMP}/${DOMAIN}.crt ${CERTTMP}/${DOMAIN}.crt.`date +%Y%m%d-%H%M%S`
@@ -48,11 +48,11 @@ if [ -f ${KEYTMP}/${DOMAIN}.key ]; then
     cp -pr ${KEYTMP}/${DOMAIN}.key ${KEYTMP}/${DOMAIN}.key.`date +%Y%m%d-%H%M%S`
 fi
 
-# ÉRÉsÅ[
+# „Ç≥„Éî„Éº
 cat ${CERTDIR}${DOMAIN}.{crt,ca-bundle} > ${CERTTMP}/${DOMAIN}.crt
 cat ${CERTDIR}${DOMAIN}.key > ${KEYTMP}/${DOMAIN}.key
 
-# confèCê≥
+# conf‰øÆÊ≠£
 TMP=`echo $PCERT | sed "s/\//\\\\\\\\\//g"`
 CERTTMP=`echo $CERTTMP | sed "s/\//\\\\\\\\\//g"`
 sed -i -e "s/$TMP/${CERTTMP}\/${DOMAIN}.crt/g" /etc/postfix/main.cf
@@ -62,6 +62,6 @@ KEYTMP=`echo $KEYTMP | sed "s/\//\\\\\\\\\//g"`
 sed -i -e "s/$TMP/${KEYTMP}\/${DOMAIN}.key/g" /etc/postfix/main.cf
 sed -i -e "s/$TMP/${KEYTMP}\/${DOMAIN}.key/g" /etc/dovecot/conf.d/10-ssl.conf
 
-# ÉTÅ[ÉrÉXçƒãNìÆ
+# „Çµ„Éº„Éì„ÇπÂÜçËµ∑Âãï
 /etc/init.d/postfix reload
 /etc/init.d/dovecot reload

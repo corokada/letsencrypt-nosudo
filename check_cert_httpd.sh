@@ -6,10 +6,10 @@
 # Author: corokada
 #
 
-## ‚»‚ê‚¼‚êŠÂ‹«‚É‡‚í‚¹‚ÄC³‚ğ‚µ‚Ä‚­‚¾‚³‚¢B
+## ãã‚Œãã‚Œç’°å¢ƒã«åˆã‚ã›ã¦ä¿®æ­£ã‚’ã—ã¦ãã ã•ã„ã€‚
 CERTDIR="`dirname $0`/"
 
-# ƒ†[ƒU[”FØî•ñ
+# ãƒ¦ãƒ¼ã‚¶ãƒ¼èªè¨¼æƒ…å ±
 USERKEY="${CERTDIR}user.key"
 USERPUB="${CERTDIR}user.pub"
 if [ ! -f ${USERPUB} ]; then
@@ -17,22 +17,22 @@ if [ ! -f ${USERPUB} ]; then
     openssl rsa -in ${USERKEY} -pubout > ${USERPUB}
 fi
 
-# httpd‚ÌƒpƒX
+# httpdã®ãƒ‘ã‚¹
 HTTPD="/usr/sbin/httpd"
 
-# ”­sƒvƒƒOƒ‰ƒ€‚ÌƒpƒX
+# ç™ºè¡Œãƒ—ãƒ­ã‚°ãƒ©ãƒ ã®ãƒ‘ã‚¹
 SIGNPG="${CERTDIR}sign_csr.py"
 
-# confˆê——æ‚èo‚µ
+# confä¸€è¦§å–ã‚Šå‡ºã—
 for CONFFILE in `$HTTPD -S | grep virtualhost | grep "port 443" | tr -d ' ' | cut -d'(' -f2 | cut -d':' -f1 | sort | uniq`
 do
-    #ƒ_ƒ~[Ø–¾‘ƒ`ƒFƒbƒN
+    #ãƒ€ãƒŸãƒ¼è¨¼æ˜æ›¸ãƒã‚§ãƒƒã‚¯
     if grep -v "#" $CONFFILE | grep -v "pki" | grep -sq "SSLCertificateFile"; then
         CERT=`grep -v "#" $CONFFILE | grep -v "pki" | grep SSLCertificateFile | awk '{print $2}' | uniq`
-        # —LŒøŠúŒÀ‚ğæ‚èo‚·
+        # æœ‰åŠ¹æœŸé™ã‚’å–ã‚Šå‡ºã™
         AFTER=`openssl x509 -noout -text -dates -in $CERT | grep notAfter | cut -d'=' -f2`
         AFTER=`env TZ=JST-9 date --date "$AFTER" +%s`
-        # Àsƒ^ƒCƒ~ƒ“ƒO‚Æ‚Ìc“ú”‚ğŒvZ‚·‚é
+        # å®Ÿè¡Œã‚¿ã‚¤ãƒŸãƒ³ã‚°ã¨ã®æ®‹æ—¥æ•°ã‚’è¨ˆç®—ã™ã‚‹
         NOW=`env TZ=JST-9 date +%s`
         CNT=`echo "$AFTER $NOW" | awk '{printf("%d",(($1-$2)/86400)+0.5)}'`
         echo "$CERT:$CNT"

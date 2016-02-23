@@ -11,16 +11,16 @@ if [ -z "$1" ]; then
         exit 0
 fi
 
-## ‚»‚ê‚¼‚êŠÂ‹«‚É‡‚í‚¹‚ÄC³‚ğ‚µ‚Ä‚­‚¾‚³‚¢B
+## ãã‚Œãã‚Œç’°å¢ƒã«åˆã‚ã›ã¦ä¿®æ­£ã‚’ã—ã¦ãã ã•ã„ã€‚
 CERTDIR="`dirname $0`/"
 
-# ƒhƒƒCƒ“İ’è
+# ãƒ‰ãƒ¡ã‚¤ãƒ³è¨­å®š
 DOMAIN=$1
 
-# qmail—pØ–¾‘ƒtƒ‹ƒpƒX
+# qmailç”¨è¨¼æ˜æ›¸ãƒ•ãƒ«ãƒ‘ã‚¹
 QMAILCERT="/var/qmail/control/servercert.pem"
 
-## Ø–¾‘ƒ`ƒFƒbƒN
+## è¨¼æ˜æ›¸ãƒã‚§ãƒƒã‚¯
 CERT="${CERTDIR}${DOMAIN}.crt"
 if [ ! -f $CERT ]; then
     echo "'$CERT' is not exist. Create a '${DOMAIN}' Certificate."
@@ -37,14 +37,14 @@ if [ ! -f $CA ]; then
     exit 0
 fi
 
-## Šù‚É‚ ‚éê‡‚ÍŒ»İ‚ğ•t‚¯‚ÄƒŠƒl[ƒ€B
+## æ—¢ã«ã‚ã‚‹å ´åˆã¯ç¾åœ¨æ™‚åˆ»ã‚’ä»˜ã‘ã¦ãƒªãƒãƒ¼ãƒ ã€‚
 if [ -f $QMAILCERT ]; then
     cp -pr $QMAILCERT $QMAILCERT.`date +%Y%m%d-%H%M%S`
 fi
 
-# ƒRƒs[
+# ã‚³ãƒ”ãƒ¼
 cat ${CERTDIR}${DOMAIN}.{key,crt,ca-bundle} > $QMAILCERT
 chown qmaild.qmail $QMAILCERT
 
-# ƒT[ƒrƒXÄ‹N“®
+# ã‚µãƒ¼ãƒ“ã‚¹å†èµ·å‹•
 /etc/init.d/qmail restart
