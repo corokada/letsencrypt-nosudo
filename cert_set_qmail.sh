@@ -12,7 +12,7 @@ if [ -z "$1" ]; then
 fi
 
 ## ‚»‚ê‚¼‚êŠÂ‹«‚É‡‚í‚¹‚ÄC³‚ð‚µ‚Ä‚­‚¾‚³‚¢B
-CERTDIR="`pwd`/"
+CERTDIR="`dirname $0`/"
 
 # ƒhƒƒCƒ“Ý’è
 DOMAIN=$1

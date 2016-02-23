@@ -12,7 +12,7 @@ if [ -z "$1" ]; then
 fi
 
 ## それぞれ環境に合わせて修正をしてください。
-CERTDIR="`pwd`/"
+CERTDIR="`dirname $0`/"
 
 # ドメイン設定
 DOMAIN=$1
