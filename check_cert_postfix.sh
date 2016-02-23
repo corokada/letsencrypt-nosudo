@@ -9,11 +9,8 @@
 ## それぞれ環境に合わせて修正をしてください。
 CERTDIR="`dirname $0`/"
 
-# ドメイン設定
-DOMAIN=$1
-
 # postfix用証明書フルパス
-PCERT=`cat /etc/postfix/main.cf | grep smtpd_tls_cert_file | sed -e "s/ //g" | cut -d'=' -f2`
+PCERT=`cat /etc/postfix/main.cf | grep "^smtpd_tls_cert_file" | sed -e "s/ //g" | cut -d'=' -f2`
 if echo $PCERT | grep -sq "localhost"; then
     exit 0
 fi

@@ -9,9 +9,6 @@
 ## それぞれ環境に合わせて修正をしてください。
 CERTDIR="`dirname $0`/"
 
-# ドメイン設定
-DOMAIN=$1
-
 #qmail用の証明書
 QMAILCERT="/var/qmail/control/servercert.pem"
 if [ ! -f $QMAILCERT ]; then
