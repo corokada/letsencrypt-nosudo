@@ -25,6 +25,9 @@ SIGNPG="${CERTDIR}sign_csr.py"
 
 # postfix用証明書フルパス
 PCERT=`cat /etc/postfix/main.cf | grep smtpd_tls_cert_file | grep -v localhost | sed -e "s/ //g" | cut -d'=' -f2`
+if [ -z "$PCERT" ]; then
+    exit 0
+fi
 if [ ! -f $PCERT ]; then
     exit 0
 fi
