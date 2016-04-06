@@ -89,8 +89,19 @@ if [ "$CNT" -le 20 ]; then
     # 現在時刻を付けてリネーム。
     AFTER=`openssl x509 -noout -text -dates -in $PCERT | grep notAfter | cut -d'=' -f2`
     AFTER=`env TZ=JST-9 date --date "$AFTER" +%Y%m%d-%H%M`
-echo "$AFTER"
     cp -pr $PCERT $PCERT.limit$AFTER
+    # CA証明書
+    CA="${CERTDIR}${DOMAIN}.ca-bundle"
+    if [ -f ${CA} ]; then
+        mv ${CA} ${CA}.limit$AFTER
+    fi
+    #wget -q -O ${CA} https://letsencrypt.org/certs/lets-encrypt-x1-cross-signed.pem
+    TMPCA1=`mktemp -p /tmp -t ca.XXXXXXXXXXXXXXX`
+    TMPCA2=`mktemp -p /tmp -t ca.XXXXXXXXXXXXXXX`
+    wget -q -O $TMPCA1 https://letsencrypt.org/certs/isrgrootx1.pem.txt
+    wget -q -O $TMPCA2 https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt
+    cat $TMPCA1 $TMPCA2 > $CA
+    rm -rf $TMPCA1 $TMPCA2
     # コピー
     cat ${CERTDIR}${DOMAIN}.{crt,ca-bundle} > ${PCERT}
     # サービス再起動

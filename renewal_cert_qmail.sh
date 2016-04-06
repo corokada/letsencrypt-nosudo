@@ -86,6 +86,18 @@ if [ "$CNT" -le 20 ]; then
     AFTER=`openssl x509 -noout -text -dates -in $QMAILCERT | grep notAfter | cut -d'=' -f2`
     AFTER=`env TZ=JST-9 date --date "$AFTER" +%Y%m%d-%H%M`
     cp -pr $QMAILCERT $QMAILCERT.limit$AFTER
+    # CA証明書
+    CA="${CERTDIR}${DOMAIN}.ca-bundle"
+    if [ -f ${CA} ]; then
+        mv ${CA} ${CA}.limit$AFTER
+    fi
+    #wget -q -O ${CA} https://letsencrypt.org/certs/lets-encrypt-x1-cross-signed.pem
+    TMPCA1=`mktemp -p /tmp -t ca.XXXXXXXXXXXXXXX`
+    TMPCA2=`mktemp -p /tmp -t ca.XXXXXXXXXXXXXXX`
+    wget -q -O $TMPCA1 https://letsencrypt.org/certs/isrgrootx1.pem.txt
+    wget -q -O $TMPCA2 https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt
+    cat $TMPCA1 $TMPCA2 > $CA
+    rm -rf $TMPCA1 $TMPCA2
     # コピー
     cat ${CERTDIR}${DOMAIN}.{key,crt,ca-bundle} > $QMAILCERT
     chown qmaild.qmail $QMAILCERT

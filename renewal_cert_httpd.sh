@@ -69,6 +69,18 @@ do
             python ${SIGNPG} -d ${DOCROOT} -p ${USERPUB} -in ${CSR} -out ${CERT}
             # 認証用ディレクトリ削除
             rm -rf ${DOCROOT}/.well-known
+            # CA証明書
+            CA="${CERTDIR}${DOMAIN}.ca-bundle"
+            if [ -f ${CA} ]; then
+                mv ${CA} ${CA}.limit$AFTER
+            fi
+            #wget -q -O ${CA} https://letsencrypt.org/certs/lets-encrypt-x1-cross-signed.pem
+            TMPCA1=`mktemp -p /tmp -t ca.XXXXXXXXXXXXXXX`
+            TMPCA2=`mktemp -p /tmp -t ca.XXXXXXXXXXXXXXX`
+            wget -q -O $TMPCA1 https://letsencrypt.org/certs/isrgrootx1.pem.txt
+            wget -q -O $TMPCA2 https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt
+            cat $TMPCA1 $TMPCA2 > $CA
+            rm -rf $TMPCA1 $TMPCA2
             # apache再起動
             apachectl graceful
         fi

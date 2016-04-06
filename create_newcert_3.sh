@@ -81,7 +81,13 @@ CA="${CERTDIR}${DOMAIN}.ca-bundle"
 if [ -f ${CA} ]; then
     mv ${CA} ${CA}.`date +%Y%m%d-%H%M%S`
 fi
-wget -q -O ${CA} https://letsencrypt.org/certs/lets-encrypt-x1-cross-signed.pem
+#wget -q -O ${CA} https://letsencrypt.org/certs/lets-encrypt-x1-cross-signed.pem
+TMPCA1=`mktemp -p /tmp -t ca.XXXXXXXXXXXXXXX`
+TMPCA2=`mktemp -p /tmp -t ca.XXXXXXXXXXXXXXX`
+wget -q -O $TMPCA1 https://letsencrypt.org/certs/isrgrootx1.pem.txt
+wget -q -O $TMPCA2 https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem.txt
+cat $TMPCA1 $TMPCA2 > $CA
+rm -rf $TMPCA1 $TMPCA2
 
 # 不要ファイル削除
 rm -rf ${DOCROOT}/.well-known
