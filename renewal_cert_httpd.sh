@@ -70,7 +70,7 @@ do
             # 認証用ディレクトリ削除
             rm -rf ${DOCROOT}/.well-known
             # CA証明書
-            CA="${CERTDIR}${DOMAIN}.ca-bundle"
+            CA=`cat $CONFFILE | grep -v "#" | grep SSLCACertificateFile | awk '{print $2}' | uniq`
             if [ -f ${CA} ]; then
                 mv ${CA} ${CA}.limit$AFTER
             fi
